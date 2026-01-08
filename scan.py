@@ -11,10 +11,14 @@ if len(sys.argv) < 2:
     domains = [domain]
 else:
     domains = sys.argv[1:]
-#ajouter un ou plusieurs domains pendant la boucle, faire une recherche en anneau
+visited = set()
 
 while domains:
     domain = domains.pop(0)
+    if domain in visited:
+        continue
+    visited.add(domain)
+
     console.rule(f"Résultats DNS pour [bold green]{domain}[/bold green]")
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Type", style="cyan", width=6)
@@ -25,6 +29,9 @@ while domains:
             answers = dns.resolver.resolve(domain, rtype)
             for rdata in answers:
                 table.add_row(rtype, rdata.to_text())
+                new_domain = str(rdata).strip()
+                if new_domain not in visited and domain != new_domain:
+                    domains.append(new_domain)
         except dns.resolver.NoAnswer:
             table.add_row(rtype, "aucune donnée trouvée", style="red")
         except dns.resolver.NXDOMAIN:
