@@ -1,7 +1,9 @@
 import sys
 import dns.resolver
-#ajouter rich
+from rich.console import Console
+from rich.table import Table
 
+console = Console()
 record_types = ["A", "AAAA", "MX", "TXT"]
 
 if len(sys.argv) < 2:
@@ -9,27 +11,28 @@ if len(sys.argv) < 2:
     domains = [domain]
 else:
     domains = sys.argv[1:]
+#ajouter un ou plusieurs domains pendant la boucle, faire une recherche en anneau
 
-for domain in domains: #ajouter un while pour chaque domaine, enlever un domain a chaque boucle, ajouter un ou plusieur domains pendant la boucle, faire une recherche en anneau
-    print("\n" + "="*50)
-    print(f"|       |{' Résultats DNS pour ' + domain :^48}|")
-    print("="*50)
+while domains:
+    domain = domains.pop(0)
+    console.rule(f"Résultats DNS pour [bold green]{domain}[/bold green]")
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Type", style="cyan", width=6)
+    table.add_column("Résultat")
 
     for rtype in record_types:
-        print(f"| {rtype:<5} | ", end="")
         try:
             answers = dns.resolver.resolve(domain, rtype)
-            print("Résultat(s) :")
             for rdata in answers:
-                print(f"|       |  {rdata.to_text()}")
+                table.add_row(rtype, rdata.to_text())
         except dns.resolver.NoAnswer:
-            print("aucune donnée trouvée")
+            table.add_row(rtype, "aucune donnée trouvée", style="red")
         except dns.resolver.NXDOMAIN:
-            print("le domaine n'existe pas")
+            table.add_row(rtype, "le domaine n'existe pas", style="red")
         except Exception as e:
-            print(f"erreur — {e}")
+            table.add_row(rtype, f"erreur — {e}", style="red")
 
-    print("="*50)
+    console.print(table)
 
 
 #exemple d'utilisation : python adressipsearch.py mdk.fr google.com wikipedia.fr
