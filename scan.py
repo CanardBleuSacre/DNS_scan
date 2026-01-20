@@ -4,6 +4,7 @@ import dns.reversename
 from ipaddress import ip_address
 from rich.console import Console
 from rich.tree import Tree
+from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
 import re
 
 console = Console()
@@ -79,9 +80,12 @@ def brute_sub(domain):
         except: pass
     return found
 
-def explore(domain, tree, depth, max_depth):
+def explore(domain, tree, depth, max_depth, progress=None, task=None):
     if depth>max_depth or domain in visited_domains: return
     visited_domains.add(domain)
+    
+    if progress and task is not None:
+        progress.update(task, advance=1, description=f"[cyan]Exploration : {domain}[/cyan]")
 
     for rtype in record_types:
         branch = tree.add(f"[cyan]{rtype}[/cyan]")
@@ -107,7 +111,7 @@ def explore(domain, tree, depth, max_depth):
                     new_ips|=i
 
                 for d in new_domains:
-                    explore(d, tree.add(f"[green]{d}[/green]"), depth+1, max_depth)
+                    explore(d, tree.add(f"[green]{d}[/green]"), depth+1, max_depth, progress, task)
                 
                 for ip in new_ips:
                     if ip not in visited_ips:
@@ -115,22 +119,22 @@ def explore(domain, tree, depth, max_depth):
                         ip_branch = tree.add(f"[yellow]{ip}[/yellow]")
 
                         for rd in reverse_dns(ip):
-                            explore(rd, ip_branch.add(f"[magenta]{rd}[/magenta]"), depth+1,max_depth)
+                            explore(rd, ip_branch.add(f"[magenta]{rd}[/magenta]"), depth+1,max_depth, progress, task)
                         
                         for nb in ip_voisines(ip):
-                            explore(nb, ip_branch.add(f"[magenta]{nb}[/magenta]"), depth+1,max_depth)
+                            explore(nb, ip_branch.add(f"[magenta]{nb}[/magenta]"), depth+1,max_depth, progress, task)
 
         except:
             branch.add("[red]aucune donnée[/red]")
 
     for p in crawl_tld(domain):
-        explore(p, tree.add(f"[blue]parent → {p}[/blue]"), depth+1,max_depth)
+        explore(p, tree.add(f"[blue]parent → {p}[/blue]"), depth+1,max_depth, progress, task)
     
     for s in scan_srv(domain):
-        explore(s, tree.add(f"[purple]SRV → {s}[/purple]"), depth+1,max_depth)
+        explore(s, tree.add(f"[purple]SRV → {s}[/purple]"), depth+1,max_depth, progress, task)
     
     for sb in brute_sub(domain):
-        explore(sb, tree.add(f"[white]sub → {sb}[/white]"), depth+1,max_depth)
+        explore(sb, tree.add(f"[white]sub → {sb}[/white]"), depth+1,max_depth, progress, task)
 
 def main():
     if len(sys.argv) < 2:
@@ -141,9 +145,15 @@ def main():
     max_depth = int(sys.argv[2]) if len(sys.argv) > 2 else 2
 
     root = Tree(f"[bold red]{start_domain}[/bold red]")
-    explore(start_domain, root, depth=0, max_depth=max_depth)
+    with Progress(
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(),
+        TextColumn("[bold]{task.completed}[/bold] domaines explorés"),
+        TimeElapsedColumn()
+    ) as progress:
+        task = progress.add_task("Initialisation...", total=None)
+        explore(start_domain, root, depth=0, max_depth=max_depth, progress=progress, task=task)
     console.print(root)
-
 
 if __name__ == "__main__":
     main()
