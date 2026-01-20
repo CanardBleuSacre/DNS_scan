@@ -1,6 +1,7 @@
 import sys
 import dns.resolver
 import dns.reversename
+from ipaddress import ip_address
 from rich.console import Console
 from rich.tree import Tree
 import re
@@ -11,6 +12,7 @@ resolver = dns.resolver.Resolver()
 record_types = ["A", "AAAA", "MX", "TXT", "CNAME"]
 common_subdomains = ["www", "mail", "ftp", "api", "dev", "test", "ns1", "ns2"]
 srv_services = ["_sip._tcp","_sip._udp","_ldap._tcp","_xmpp-server._tcp","_xmpp-client._tcp"]
+known_tlds = ["com","net","org","fr","edu","gouv.fr","co.uk"]
 
 domain_regex = (
     rf"(?:[a-z0-9_]"
@@ -21,12 +23,20 @@ domain_regex = (
 )
 
 visited_domains = set()
+ip_range = 1
 
 def parse_args():
     if len(sys.argv) < 2:
         return [input("Entrez un nom de domaine : ").strip()]
     return sys.argv[1:]
 
+def crawl_tld(domain):
+    parts, parents = domain.split("."), []
+    for i in range(1,len(parts)):
+        cand = ".".join(parts[i:])
+        if cand in known_tlds: break
+        parents.append(cand)
+    return parents
 
 def scan_srv(domain):
     f = set()
@@ -38,8 +48,18 @@ def scan_srv(domain):
     return f 
 
 def reverse_dns(ip):
-    try: return [str(a).rstrip(".") for a in resolver.resolve(dns.reversename.from_address(ip),"PTR")]
+    try: 
+        return [str(a).rstrip(".") for a in resolver.resolve(dns.reversename.from_address(ip),"PTR")]
     except: return []
+
+def ip_voisines(ip):
+    res, base = set(), int(ip_address(ip))
+    for o in range(-ip_range,ip_range+1):
+        if o==0: continue
+        try: 
+            res |= set(reverse_dns(str(ip_address(base+o))))
+        except: pass
+    return res
 
 def extract_domains(domain, rtype, text):
     new_domains = set()
