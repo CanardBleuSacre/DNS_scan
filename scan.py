@@ -7,6 +7,7 @@ import re
 console = Console()
 record_types = ["A", "AAAA", "MX", "TXT", "CNAME"]
 common_subdomains = ["www", "mail", "ftp", "api", "dev", "test", "ns1", "ns2"]
+srv_services = ["_sip._tcp","_sip._udp","_ldap._tcp","_xmpp-server._tcp","_xmpp-client._tcp"]
 resolver = dns.resolver.Resolver()
 
 domain_regex = (
@@ -19,16 +20,22 @@ domain_regex = (
 
 visited_domains = set()
 
-
 def parse_args():
-    """Récupère les domaines depuis la ligne de commande ou l'entrée utilisateur."""
     if len(sys.argv) < 2:
         return [input("Entrez un nom de domaine : ").strip()]
     return sys.argv[1:]
 
 
+def scan_srv(domain):
+    f = set()
+    for s in srv_services():
+        try:
+            for r in resolver.resolve(f"{s}.{domain}","srv"):
+                f.add(str(r.target).rstrip("."))
+        except: pass
+    return f 
+
 def extract_domains(domain, rtype, text):
-    """Extrait de nouveaux domaines selon la stratégie utilisée."""
     new_domains = set()
 
     if rtype == "MX":
@@ -41,7 +48,6 @@ def extract_domains(domain, rtype, text):
         for d in found:
             new_domains.add(d.rstrip("."))
 
-    # Brute-force de sous-domaines simples
     base_parts = domain.split(".")
     if len(base_parts) >= 2:
         base_domain = ".".join(base_parts[-2:])
@@ -52,7 +58,6 @@ def extract_domains(domain, rtype, text):
 
 
 def resolve_domain(domain):
-    """Résout les enregistrements DNS d'un domaine et retourne un arbre Rich."""
     tree = Tree(f"[bold green]{domain}[/bold green]")
 
     for rtype in record_types:
