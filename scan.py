@@ -74,6 +74,15 @@ def ip_voisines(ip):
         except: pass
     return res
 
+def brute_sub(domain):
+    found = set()
+    for s in common_subdomains:
+        try:
+            resolver.resolve(f"{s}.{domain}","A")
+            found.add(f"{s}.{domain}")
+        except: pass
+    return found
+
 def extract_domains(domain, rtype, text):
     new_domains = set()
 
