@@ -9,7 +9,7 @@ import re
 console = Console()
 resolver = dns.resolver.Resolver()
 
-record_types = ["A", "AAAA", "MX", "TXT", "CNAME"]
+record_types = ["A", "AAAA", "MX", "TXT", "CNAME", "SOA"]
 common_subdomains = ["www", "mail", "ftp", "api", "dev", "test", "ns1", "ns2"]
 srv_services = ["_sip._tcp","_sip._udp","_ldap._tcp","_xmpp-server._tcp","_xmpp-client._tcp"]
 known_tlds = ["com","net","org","fr","edu","gouv.fr","co.uk"]
@@ -26,12 +26,8 @@ ip_regex = (
 )
 
 visited_domains = set()
+visited_ips = set()
 ip_range = 1
-
-def parse_args():
-    if len(sys.argv) < 2:
-        return [input("Entrez un nom de domaine : ").strip()]
-    return sys.argv[1:]
 
 def parse_txt(domain):
     d, i = set(), set()
@@ -83,67 +79,70 @@ def brute_sub(domain):
         except: pass
     return found
 
-def extract_domains(domain, rtype, text):
-    new_domains = set()
-
-    if rtype == "MX":
-        parts = text.split()
-        if len(parts) == 2:
-            new_domains.add(parts[1].rstrip("."))
-
-    elif rtype == "TXT":
-        found = re.findall(domain_regex, text, flags=re.IGNORECASE)
-        for d in found:
-            new_domains.add(d.rstrip("."))
-
-    base_parts = domain.split(".")
-    if len(base_parts) >= 2:
-        base_domain = ".".join(base_parts[-2:])
-        for sub in common_subdomains:
-            new_domains.add(f"{sub}.{base_domain}")
-
-    return new_domains
-
-
-def resolve_domain(domain):
-    tree = Tree(f"[bold green]{domain}[/bold green]")
+def explore(domain, tree, depth, max_depth):
+    if depth>max_depth or domain in visited_domains: return
+    visited_domains.add(domain)
 
     for rtype in record_types:
         branch = tree.add(f"[cyan]{rtype}[/cyan]")
+        
         try:
-            answers = resolver.resolve(domain, rtype)
+            for r in resolver.resolve(domain,rtype):
+                val = r.to_text()
+                branch.add(val)
 
-            for rdata in answers:
-                text = rdata.to_text()
-                branch.add(text)
+                new_domains = set()
+                new_ips = set()
+                if rtype in ("A","AAAA"):
+                    new_ips.add(val)
+                if rtype=="MX":
+                    new_domains.add(val.split()[-1].rstrip("."))
+                if rtype=="CNAME":
+                    new_domains.add(val.rstrip("."))
+                if rtype=="SOA":
+                    new_domains.add(val.split()[0].rstrip("."))
+                if rtype=="TXT":
+                    d,i=parse_txt(domain)
+                    new_domains|=d
+                    new_ips|=i
 
-                new_domains = extract_domains(domain, rtype, text)
+                for d in new_domains:
+                    explore(d, tree.add(f"[green]{d}[/green]"), depth+1, max_depth)
+                
+                for ip in new_ips:
+                    if ip not in visited_ips:
+                        visited_ips.add(ip)
+                        ip_branch = tree.add(f"[yellow]{ip}[/yellow]")
 
-                for nd in new_domains:
-                    if nd not in visited_domains and nd != domain:
-                        domains.append(nd)
+                        for rd in reverse_dns(ip):
+                            explore(rd, ip_branch.add(f"[magenta]{rd}[/magenta]"), depth+1,max_depth)
+                        
+                        for nb in ip_voisines(ip):
+                            explore(nb, ip_branch.add(f"[magenta]{nb}[/magenta]"), depth+1,max_depth)
 
-        except dns.resolver.NoAnswer:
+        except:
             branch.add("[red]aucune donnée[/red]")
-        except dns.resolver.NXDOMAIN:
-            branch.add("[red]domaine inexistant[/red]")
-        except Exception as e:
-            branch.add(f"[red]erreur : {e}[/red]")
 
-    return tree
+    for p in crawl_tld(domain):
+        explore(p, tree.add(f"[blue]parent → {p}[/blue]"), depth+1,max_depth)
+    
+    for s in scan_srv(domain):
+        explore(s, tree.add(f"[purple]SRV → {s}[/purple]"), depth+1,max_depth)
+    
+    for sb in brute_sub(domain):
+        explore(sb, tree.add(f"[white]sub → {sb}[/white]"), depth+1,max_depth)
 
 def main():
-    global domains
-    domains = parse_args()
+    if len(sys.argv) < 2:
+        print("Usage: python scan.py [domain] [depth]")
+        exit(1)
 
-    while domains:
-        domain = domains.pop(0)
-        if domain in visited_domains:
-            continue
+    start_domain = sys.argv[1].rstrip(".")
+    max_depth = int(sys.argv[2]) if len(sys.argv) > 2 else 2
 
-        visited_domains.add(domain)
-        tree = resolve_domain(domain)
-        console.print(tree)
+    root = Tree(f"[bold red]{start_domain}[/bold red]")
+    explore(start_domain, root, depth=0, max_depth=max_depth)
+    console.print(root)
 
 
 if __name__ == "__main__":
