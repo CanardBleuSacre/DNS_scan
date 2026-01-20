@@ -21,6 +21,9 @@ domain_regex = (
     r"+[a-z0-9][a-z0-9-_]{0,61}"
     rf"[a-z]\.?"
 )
+ip_regex = (
+    r"\b(?:\d{1,3}\.){3}\d{1,3}\b"
+)
 
 visited_domains = set()
 ip_range = 1
@@ -29,6 +32,16 @@ def parse_args():
     if len(sys.argv) < 2:
         return [input("Entrez un nom de domaine : ").strip()]
     return sys.argv[1:]
+
+def parse_txt(domain):
+    d, i = set(), set()
+    try:
+        for r in resolver.resolve(domain,"TXT"):
+            t = " ".join(s.decode() for s in r.strings)
+            d |= set(re.findall(domain_regex,t))
+            i |= set(re.findall(ip_regex,t))
+    except: pass
+    return d,i
 
 def crawl_tld(domain):
     parts, parents = domain.split("."), []
@@ -40,7 +53,7 @@ def crawl_tld(domain):
 
 def scan_srv(domain):
     f = set()
-    for s in srv_services():
+    for s in srv_services:
         try:
             for r in resolver.resolve(f"{s}.{domain}","SRV"):
                 f.add(str(r.target).rstrip("."))
