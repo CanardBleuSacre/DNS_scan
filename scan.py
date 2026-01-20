@@ -1,14 +1,16 @@
 import sys
 import dns.resolver
+import dns.reversename
 from rich.console import Console
 from rich.tree import Tree
 import re
 
 console = Console()
+resolver = dns.resolver.Resolver()
+
 record_types = ["A", "AAAA", "MX", "TXT", "CNAME"]
 common_subdomains = ["www", "mail", "ftp", "api", "dev", "test", "ns1", "ns2"]
 srv_services = ["_sip._tcp","_sip._udp","_ldap._tcp","_xmpp-server._tcp","_xmpp-client._tcp"]
-resolver = dns.resolver.Resolver()
 
 domain_regex = (
     rf"(?:[a-z0-9_]"
@@ -30,10 +32,14 @@ def scan_srv(domain):
     f = set()
     for s in srv_services():
         try:
-            for r in resolver.resolve(f"{s}.{domain}","srv"):
+            for r in resolver.resolve(f"{s}.{domain}","SRV"):
                 f.add(str(r.target).rstrip("."))
         except: pass
     return f 
+
+def reverse_dns(ip):
+    try: return [str(a).rstrip(".") for a in resolver.resolve(dns.reversename.from_address(ip),"PTR")]
+    except: return []
 
 def extract_domains(domain, rtype, text):
     new_domains = set()
