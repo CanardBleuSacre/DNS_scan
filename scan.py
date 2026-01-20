@@ -1,13 +1,14 @@
 import sys
 import dns.resolver
 from rich.console import Console
-from rich.table import Table
+from rich.tree import Tree
 import re
 
 console = Console()
-record_types = ["A", "AAAA", "MX", "TXT"]
+record_types = ["A", "AAAA", "MX", "TXT", "CNAME"]
+common_subdomains = ["www", "mail", "ftp", "api", "dev", "test", "ns1", "ns2"]
 
-DOMAIN_REGEX = (
+domain_regex = (
     rf"(?:[a-z0-9_]"
     rf"(?:[a-z0-9-_]{{0,61}}"
     rf"[a-z0-9_])?\.)"
@@ -15,23 +16,21 @@ DOMAIN_REGEX = (
     rf"[a-z]\.?"
 )
 
+visited_domains = set()
+
 if len(sys.argv) < 2:
     domain = input("Entrez un nom de domaine : ").strip()
     domains = [domain]
 else:
     domains = sys.argv[1:]
-visited = set()
 
 while domains:
     domain = domains.pop(0)
-    if domain in visited:
+    if domain in visited_domains:
         continue
-    visited.add(domain)
+    visited_domains.add(domain)
 
-    console.rule(f"Résultats DNS pour [bold green]{domain}[/bold green]")
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("Type", style="cyan", width=6)
-    table.add_column("Résultat")
+    tree = Tree(f"[bold green]{domain}[/bold green]")
 
     for rtype in record_types:
         try:
@@ -39,7 +38,7 @@ while domains:
             
             for rdata in answers:
                 text = rdata.to_text()
-                table.add_row(rtype, rdata.to_text())
+                branch = tree.add(f"[cyan]{rtype}[/cyan]")
                 
                 new_domains = set()
 
@@ -49,19 +48,25 @@ while domains:
                         new_domains.add(parts[1].rstrip("."))
 
                 elif rtype == "TXT":
-                    found = re.findall(DOMAIN_REGEX, text, flags=re.IGNORECASE)
+                    found = re.findall(domain_regex, text, flags=re.IGNORECASE)
                     for d in found:
                         new_domains.add(d.rstrip("."))
                 
+                base_parts = domain.split('.')
+                if len(base_parts) >= 2:
+                    base_domain = ".".join(base_parts[-2:])  # ex: example.com
+                    for sub in common_subdomains:
+                        new_domains.add(f"{sub}.{base_domain}")
+                
                 for nd in new_domains:
-                    if nd not in visited and nd != domain:
+                    if nd not in visited_domains and nd != domain:
                         domains.append(nd)
         
         except dns.resolver.NoAnswer:
-            table.add_row(rtype, "aucune donnée trouvée", style="red")
+            branch.add("[red]aucune donnée[/red]")
         except dns.resolver.NXDOMAIN:
-            table.add_row(rtype, "le domaine n'existe pas", style="red")
+            branch.add("[red]domaine inexistant[/red]")
         except Exception as e:
-            table.add_row(rtype, f"erreur — {e}", style="red")
+            branch.add(f"[red]erreur : {e}[/red]")
 
-    console.print(table)
+    console.print(tree)
