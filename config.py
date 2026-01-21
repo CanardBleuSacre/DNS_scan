@@ -6,7 +6,11 @@ resolver = dns.resolver.Resolver()
 
 record_types = ["A", "AAAA", "MX", "TXT", "CNAME", "SOA"]
 common_subdomains = ["www", "mail", "ftp", "api", "dev", "test", "ns1", "ns2"]
-srv_services = ["_sip._tcp","_sip._udp","_ldap._tcp","_xmpp-server._tcp","_xmpp-client._tcp"]
+srv_services = [
+    "_sip._tcp", "_sip._udp", "_ldap._tcp", "_xmpp-server._tcp", "_xmpp-client._tcp",
+    "_kerberos._tcp", "_caldav._tcp", "_carddav._tcp", "_imap._tcp", "_smtp._tcp",
+    "_imaps._tcp", "_pop3s._tcp", "_submission._tcp"
+]
 known_tlds = ["com","net","org","fr","edu","gouv.fr","co.uk"]
 
 domain_regex = (
