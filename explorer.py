@@ -2,6 +2,11 @@ from config import (resolver, record_types, visited_domains, visited_ips)
 from dns_tools.__init__ import (parse_txt, crawl_tld, scan_srv, reverse_dns, ip_voisines, brute_sub)
 
 def explore(domain, tree, depth, max_depth, progress=None, task=None):
+    '''
+    Explore récursivement les enregistrements DNS d'un domaine donné
+    jusqu'à une profondeur maximale spécifiée, en construisant un arbre
+    de résultats avec Rich.
+    '''
     if depth>max_depth or domain in visited_domains: return
     visited_domains.add(domain)
     

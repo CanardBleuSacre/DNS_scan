@@ -7,6 +7,9 @@ from config import console
 from explorer import explore
 
 def main():
+    '''
+    Point d'entrée principal pour l'outil de cartographie DNS.
+    '''
     parser = argparse.ArgumentParser(
         description="Outil de cartographie DNS écrit en Python",
         epilog="Exemple : python scan.py oracle.com 1"
