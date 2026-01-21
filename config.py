@@ -1,5 +1,6 @@
 import dns.resolver
 from rich.console import Console
+from tld_updater import known_tlds
 
 console = Console()
 resolver = dns.resolver.Resolver()
@@ -11,8 +12,6 @@ srv_services = [
     "_kerberos._tcp", "_caldav._tcp", "_carddav._tcp", "_imap._tcp", "_smtp._tcp",
     "_imaps._tcp", "_pop3s._tcp", "_submission._tcp"
 ]
-known_tlds = ["com","net","org","fr","edu","gouv.fr","co.uk"]
-
 domain_regex = (
     rf"(?:[a-z0-9_]"
     rf"(?:[a-z0-9-_]{{0,61}}"

@@ -2,10 +2,10 @@ import argparse
 import sys
 from rich.tree import Tree
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
-
 from config import console, excluded_domains
 from explorer import explore
 from markdown_export import save_markdown
+from tld_updater import get_tld_list
 
 def main():
     '''
@@ -37,6 +37,11 @@ def main():
         help="Domaines à exclure de la récursion, séparés par des virgules (ex: --exclude microsoft.com,akamai.net)",
         default=None
     )
+    parser. add_argument(
+        "--update-tld",
+        action="store_true",
+        help="Forcer la mise à jour de la liste des TLD depuis l'IANA"
+    )
     parser.add_argument(
         "--version", 
         action="version", 
@@ -45,6 +50,12 @@ def main():
     args = parser.parse_args()
     start_domain = args.domain.rstrip(".")
     
+    if args.update_tld:
+        console.print("[cyan]⏳ Mise à jour de la liste TLD.. .[/cyan]")
+        tlds = get_tld_list(force_update=True)
+        console.print(f"[green]✓ {len(tlds)} TLD chargés avec succès[/green]")
+        return
+
     if not start_domain or "." not in start_domain:
         console.print(f"[bold red]Erreur:[/bold red] '{start_domain}' n'est pas un domaine valide")
         sys.exit(1)
