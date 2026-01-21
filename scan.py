@@ -5,6 +5,7 @@ from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
 
 from config import console
 from explorer import explore
+from markdown_export import save_markdown
 
 def main():
     '''
@@ -24,6 +25,11 @@ def main():
         nargs="?", 
         default=2, 
         help="Profondeur de récursion (défaut: 2)"
+    )
+    parser.add_argument(
+        "--markdown",
+        "-m",
+        help="Exporter les résultats au format Markdown; spécifier le nom du fichier de sortie (ex: --markdown resultat.md)",
     )
     parser.add_argument(
         "--version", 
@@ -52,6 +58,9 @@ def main():
         task = progress.add_task("Initialisation.. .", total=None)
         explore(start_domain, root, depth=0, max_depth=max_depth, progress=progress, task=task)
     console.print(root)
+
+    if args.markdown:
+        save_markdown(start_domain, root, args.markdown)
 
 if __name__ == "__main__": 
     main()
