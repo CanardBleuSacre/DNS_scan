@@ -52,6 +52,15 @@ def explore(domain, tree, depth, max_depth, progress=None, task=None):
 
         except:
             branch.add("[red]aucune donnée[/red]")
+    
+    try:
+        dmarc_domain = f"_dmarc.{domain}"
+        for r in resolver.resolve(dmarc_domain, "TXT"):
+            txt = " ".join(s.decode() for s in r.strings)
+            from dns_tools.dns_parsing_spe import parse_dmarc
+            new_domains |= parse_dmarc(txt)
+    except:
+        pass
 
     for p in crawl_tld(domain):
         explore(p, tree.add(f"[blue]parent → {p}[/blue]"), depth+1,max_depth, progress, task)
