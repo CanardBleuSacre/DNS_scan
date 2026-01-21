@@ -19,6 +19,9 @@ def explore(domain, tree, depth, max_depth, progress=None, task=None):
     if depth>max_depth or domain in visited_domains: return
     visited_domains.add(domain)
     
+    if not doit_explore(domain):
+        return
+
     if progress and task is not None:
         progress.update(task, advance=1, description=f"[cyan]Exploration : {domain}[/cyan]")
 
