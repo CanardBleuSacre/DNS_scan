@@ -19,6 +19,18 @@ domain_regex = (
 ip_regex = (
     r"\b(?:\d{1,3}\.){3}\d{1,3}\b"
 )
+excluded_domains = {
+    "microsoft.com",
+    "akamai.net",
+    "cloudflare. com",
+    "fastly.net",
+    "amazonaws.com",
+    "azure.com",
+    "googleusercontent.com",
+    "gstatic.com",
+    "office. com",
+    "outlook.com",
+}
 
 visited_domains = set()
 visited_ips = set()

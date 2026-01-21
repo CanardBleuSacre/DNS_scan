@@ -1,5 +1,14 @@
-from config import (resolver, record_types, visited_domains, visited_ips)
+from config import (resolver, record_types, visited_domains, visited_ips, excluded_domains)
 from dns_tools.__init__ import (parse_txt, crawl_tld, scan_srv, reverse_dns, ip_voisines, brute_sub)
+
+def doit_explore(domain):
+    '''
+    Vérifie si un domaine doit être exploré en fonction de la liste des exclusions.
+    '''
+    for excluded in excluded_domains:
+        if domain.endswith(excluded) or domain == excluded:
+            return False
+    return True
 
 def explore(domain, tree, depth, max_depth, progress=None, task=None):
     '''

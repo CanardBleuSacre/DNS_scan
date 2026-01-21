@@ -3,7 +3,7 @@ import sys
 from rich.tree import Tree
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn
 
-from config import console
+from config import console, excluded_domains
 from explorer import explore
 from markdown_export import save_markdown
 
@@ -32,6 +32,12 @@ def main():
         help="Exporter les résultats au format Markdown; spécifier le nom du fichier de sortie (ex: --markdown resultat.md)",
     )
     parser.add_argument(
+        "--exclude",
+        "-e",
+        help="Domaines à exclure de la récursion, séparés par des virgules (ex: --exclude microsoft.com,akamai.net)",
+        default=None
+    )
+    parser.add_argument(
         "--version", 
         action="version", 
         version="DNS_scan 1.0"
@@ -47,6 +53,11 @@ def main():
     if max_depth < 1:
         console.print(f"[bold red]Erreur:[/bold red] La profondeur ne peut pas être négative.")
         sys.exit(1)
+
+    if args.exclude:
+        additional_exclusions = set(args.exclude.split(","))
+        excluded_domains.update(additional_exclusions)
+        console.print(f"[yellow]ℹ Domaines exclus:[/yellow] {', '.join(sorted(excluded_domains))}")
 
     root = Tree(f"[bold red]{start_domain}[/bold red]")
     with Progress(
