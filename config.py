@@ -34,4 +34,5 @@ excluded_domains = {
 
 visited_domains = set()
 visited_ips = set()
-ip_range = 1
+ip_voisines_range = [1, 5, 10, 20]
+ip_voisines_max_fails = 5

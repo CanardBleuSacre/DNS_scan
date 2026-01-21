@@ -59,7 +59,8 @@ def explore(domain, tree, depth, max_depth, progress=None, task=None):
                         for rd in reverse_dns(ip):
                             explore(rd, ip_branch.add(f"[magenta]{rd}[/magenta]"), depth+1,max_depth, progress, task)
                         
-                        for nb in ip_voisines(ip):
+                        aggressive_mode = (depth < 2)
+                        for nb in ip_voisines(ip, aggressive=aggressive_mode):
                             explore(nb, ip_branch.add(f"[magenta]{nb}[/magenta]"), depth+1,max_depth, progress, task)
 
         except:
